@@ -38,7 +38,7 @@ public class UserController {
         if (users.containsKey(newUser.getId())) {
             User user = users.get(newUser.getId());
             user.setLogin(newUser.getLogin());
-            validateAndSetName(user);
+            validateAndSetName(user, newUser);
             user.setEmail(newUser.getEmail());
             user.setBirthday(newUser.getBirthday());
             log.info("Обновлен пользователь " + user);
@@ -61,6 +61,15 @@ public class UserController {
     private void validateAndSetName(User user) {
         if (user.getName() == null || user.getName().isEmpty()) {
             user.setName(user.getLogin());
+        }
+    }
+
+    // перегрузка метода validateAndSetName для обновления пользователя
+    private void validateAndSetName(User user, User newUser) {
+        if (newUser.getName() == null || newUser.getName().isEmpty()) {
+            user.setName(newUser.getLogin());
+        } else {
+            user.setName(newUser.getName());
         }
     }
 }
