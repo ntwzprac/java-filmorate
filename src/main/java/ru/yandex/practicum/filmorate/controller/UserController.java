@@ -37,9 +37,9 @@ public class UserController {
     public User updateUser(@Valid @RequestBody User newUser) {
         if (users.containsKey(newUser.getId())) {
             User user = users.get(newUser.getId());
-            user.setName(newUser.getName());
-            user.setEmail(newUser.getEmail());
             user.setLogin(newUser.getLogin());
+            validateAndSetName(user);
+            user.setEmail(newUser.getEmail());
             user.setBirthday(newUser.getBirthday());
             log.info("Обновлен пользователь " + user);
             return user;
