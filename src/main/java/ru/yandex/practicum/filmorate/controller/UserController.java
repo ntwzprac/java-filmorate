@@ -26,9 +26,7 @@ public class UserController {
     public User createUser(@Valid @RequestBody User user) {
         user.setId(getNextId());
 
-        if (user.getName() == null || user.getName().isEmpty()) {
-            user.setName(user.getLogin());
-        }
+        validateAndSetName(user);
 
         users.put(user.getId(), user);
         log.info("Создан пользователь " + user);
@@ -58,5 +56,11 @@ public class UserController {
                 .max()
                 .orElse(0);
         return ++currentMaxId;
+    }
+
+    private void validateAndSetName(User user) {
+        if (user.getName() == null || user.getName().isEmpty()) {
+            user.setName(user.getLogin());
+        }
     }
 }
