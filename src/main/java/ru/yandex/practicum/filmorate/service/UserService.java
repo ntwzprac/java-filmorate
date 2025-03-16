@@ -2,13 +2,12 @@ package ru.yandex.practicum.filmorate.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.exceptions.ValidationException;
+import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -23,8 +22,8 @@ public class UserService {
     }
 
     public void addFriend(long userId, long friendId) {
-        User user = userStorage.getUserById(userId).orElseThrow(() -> new ValidationException("Пользователь с id " + userId + " не найден"));
-        User friend = userStorage.getUserById(friendId).orElseThrow(() -> new ValidationException("Пользователь с id " + friendId + " не найден"));
+        User user = checkAndGetUserById(userId);
+        User friend = checkAndGetUserById(friendId);
         user.getFriends().add(friendId);
         friend.getFriends().add(userId);
         userStorage.updateUser(user);
@@ -32,8 +31,8 @@ public class UserService {
     }
 
     public void removeFriend(long userId, long friendId) {
-        User user = userStorage.getUserById(userId).orElseThrow(() -> new ValidationException("Пользователь с id " + userId + " не найден"));
-        User friend = userStorage.getUserById(friendId).orElseThrow(() -> new ValidationException("Пользователь с id " + friendId + " не найден"));
+        User user = checkAndGetUserById(userId);
+        User friend = checkAndGetUserById(friendId);
         user.getFriends().remove(friendId);
         friend.getFriends().remove(userId);
         userStorage.updateUser(user);
@@ -41,8 +40,8 @@ public class UserService {
     }
 
     public List<User> getCommonFriends(long userId, long otherUserId) {
-        User user = userStorage.getUserById(userId).orElseThrow(() -> new ValidationException("Пользователь с id " + userId + " не найден"));
-        User otherUser = userStorage.getUserById(otherUserId).orElseThrow(() -> new ValidationException("Пользователь с id " + otherUserId + " не найден"));
+        User user = checkAndGetUserById(userId);
+        User otherUser = checkAndGetUserById(otherUserId);
 
         Set<Long> userFriends = user.getFriends();
         Set<Long> otherUserFriends = otherUser.getFriends();
@@ -51,16 +50,18 @@ public class UserService {
         commonFriendsIds.retainAll(otherUserFriends);
 
         return commonFriendsIds.stream()
-                .map(id -> userStorage.getUserById(id).orElse(null))
-                .filter(Objects::nonNull)
+                .map(this::checkAndGetUserById)
                 .collect(Collectors.toList());
     }
 
     public List<User> getUserFriends(long userId) {
-        User user = userStorage.getUserById(userId).orElseThrow(() -> new ValidationException("Пользователь с id " + userId + " не найден"));
+        User user = checkAndGetUserById(userId);
         return user.getFriends().stream()
-                .map(id -> userStorage.getUserById(id).orElse(null))
-                .filter(Objects::nonNull)
+                .map(this::checkAndGetUserById)
                 .collect(Collectors.toList());
+    }
+
+    private User checkAndGetUserById(long id) {
+        return userStorage.getUserById(id).orElseThrow(() -> new NotFoundException("Пользователь с id " + id + " не найден"));
     }
 }
