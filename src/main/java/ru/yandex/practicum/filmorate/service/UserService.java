@@ -21,6 +21,7 @@ public class UserService {
     public UserService(UserStorage userStorage) {
         this.userStorage = userStorage;
     }
+
     public Collection<User> getAllUsers() {
         return userStorage.getAllUsers();
     }
@@ -28,6 +29,7 @@ public class UserService {
     public User getUserById(long userId) {
         return checkAndGetUserById(userId);
     }
+
     public User createUser(User user) {
         return userStorage.addUser(user);
     }
@@ -35,6 +37,7 @@ public class UserService {
     public User updateUser(User user) {
         return userStorage.updateUser(user);
     }
+
     public void addFriend(long userId, long friendId) {
         User user = checkAndGetUserById(userId);
         User friend = checkAndGetUserById(friendId);
