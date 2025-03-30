@@ -16,7 +16,7 @@ import java.util.HashMap;
 public class User {
     private Long id;
     @NotBlank(message = "Почта не может быть пустой")
-    @Email(message = "Некорректный не может быть пустым")
+    @Email(message = "Некорректный формат почты")
     private String email;
     @NotBlank(message = "Логин не может быть пустым")
     private String login;
