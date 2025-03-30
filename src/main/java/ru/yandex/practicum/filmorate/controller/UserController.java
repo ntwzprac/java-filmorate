@@ -23,7 +23,7 @@ public class UserController {
 
     @GetMapping
     public Collection<User> getAllUsers() {
-        log.info("Получен список пользователей");
+        log.info("ун список пользователей");
         return userService.getAllUsers();
     }
 
@@ -43,7 +43,7 @@ public class UserController {
     @PutMapping
     public User updateUser(@Valid @RequestBody User user) {
         validateAndSetName(user);
-        log.info("Обновлен пользователь " + user);
+        log.info("Пользователь " + user + " обновлен");
         return userService.updateUser(user);
     }
 

@@ -6,6 +6,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.exceptions.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.MPA;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.FilmService;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
@@ -15,6 +17,7 @@ import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Optional;
 
@@ -44,8 +47,8 @@ class FilmControllerTest {
 
     @Test
     void getAllFilms_ShouldReturnAllFilms_WhenFilmsAdded() {
-        Film film1 = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>());
-        Film film2 = new Film(null, "Film 2", "Description 2", LocalDate.of(2010, 1, 1), 120, new HashSet<>());
+        Film film1 = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>(), Genre.COMEDY, MPA.G);
+        Film film2 = new Film(null, "Film 2", "Description 2", LocalDate.of(2010, 1, 1), 120, new HashSet<>(), Genre.DRAMA, MPA.PG);
         filmController.createFilm(film1);
         filmController.createFilm(film2);
 
@@ -57,28 +60,30 @@ class FilmControllerTest {
 
     @Test
     void createFilm_ShouldCreateFilm_WhenValidFilmProvided() {
-        Film film = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>());
+        Film film = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>(), Genre.COMEDY, MPA.G);
         Film createdFilm = filmController.createFilm(film);
         assertNotNull(createdFilm.getId());
         assertEquals(film.getName(), createdFilm.getName());
         assertEquals(film.getDescription(), createdFilm.getDescription());
         assertEquals(film.getReleaseDate(), createdFilm.getReleaseDate());
         assertEquals(film.getDuration(), createdFilm.getDuration());
+        assertEquals(film.getGenre(), createdFilm.getGenre());
+        assertEquals(film.getMpa(), createdFilm.getMpa());
         assertEquals(1, filmStorage.getAllFilms().size());
         assertTrue(filmStorage.getAllFilms().contains(createdFilm));
     }
 
     @Test
     void createFilm_ShouldThrowValidationException_WhenReleaseDateIsBeforeThreshold() {
-        Film film = new Film(null, "Film 1", "Description 1", LocalDate.of(1895, 12, 27), 100, new HashSet<>());
+        Film film = new Film(null, "Film 1", "Description 1", LocalDate.of(1895, 12, 27), 100, new HashSet<>(), Genre.COMEDY, MPA.G);
         assertThrows(ValidationException.class, () -> filmController.createFilm(film));
         assertTrue(filmStorage.getAllFilms().isEmpty());
     }
 
     @Test
     void createFilm_ShouldAssignCorrectId_WhenMultipleFilmsCreated() {
-        Film film1 = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>());
-        Film film2 = new Film(null, "Film 2", "Description 2", LocalDate.of(2000, 1, 1), 100, new HashSet<>());
+        Film film1 = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>(), Genre.COMEDY, MPA.G);
+        Film film2 = new Film(null, "Film 2", "Description 2", LocalDate.of(2000, 1, 1), 100, new HashSet<>(), Genre.DRAMA, MPA.PG);
         Film createdFilm1 = filmController.createFilm(film1);
         Film createdFilm2 = filmController.createFilm(film2);
         assertEquals(1, createdFilm1.getId());
@@ -87,37 +92,43 @@ class FilmControllerTest {
 
     @Test
     void updateFilm_ShouldUpdateFilm_WhenFilmExists() {
-        Film film = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>());
+        Film film = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>(), Genre.COMEDY, MPA.G);
         Film createdFilm = filmController.createFilm(film);
-        Film updatedFilm = new Film(createdFilm.getId(), "Updated Film", "Updated Description", LocalDate.of(2010, 1, 1), 120, new HashSet<>());
+        Film updatedFilm = new Film(createdFilm.getId(), "Updated Film", "Updated Description", LocalDate.of(2010, 1, 1), 120, new HashSet<>(), Genre.ACTION, MPA.R);
         Film result = filmController.updateFilm(updatedFilm);
 
         assertEquals(updatedFilm.getName(), result.getName());
         assertEquals(updatedFilm.getDescription(), result.getDescription());
         assertEquals(updatedFilm.getReleaseDate(), result.getReleaseDate());
         assertEquals(updatedFilm.getDuration(), result.getDuration());
+        assertEquals(updatedFilm.getGenre(), result.getGenre());
+        assertEquals(updatedFilm.getMpa(), result.getMpa());
 
         assertEquals(1, filmStorage.getAllFilms().size());
         Optional<Film> resultFromStorage = filmStorage.getFilmById(createdFilm.getId());
         assertTrue(resultFromStorage.isPresent());
         assertEquals(updatedFilm.getName(), resultFromStorage.get().getName());
+        assertEquals(updatedFilm.getGenre(), resultFromStorage.get().getGenre());
+        assertEquals(updatedFilm.getMpa(), resultFromStorage.get().getMpa());
     }
 
     @Test
     void updateFilm_ShouldThrowNotFoundException_WhenFilmDoesNotExist() {
-        Film updatedFilm = new Film(1L, "Updated Film", "Updated Description", LocalDate.of(2010, 1, 1), 120, new HashSet<>());
+        Film updatedFilm = new Film(1L, "Updated Film", "Updated Description", LocalDate.of(2010, 1, 1), 120, new HashSet<>(), Genre.ACTION, MPA.R);
         NotFoundException ex = assertThrows(NotFoundException.class, () -> filmController.updateFilm(updatedFilm));
         assertEquals("Фильм с id 1 не найден", ex.getMessage());
     }
 
     @Test
     void getFilmById_ShouldReturnFilm_WhenFilmExists() {
-        Film film = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>());
+        Film film = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>(), Genre.COMEDY, MPA.G);
         Film createdFilm = filmController.createFilm(film);
         Film retrievedFilm = filmController.getFilmById(createdFilm.getId());
 
         assertEquals(createdFilm.getId(), retrievedFilm.getId());
         assertEquals(createdFilm.getName(), retrievedFilm.getName());
+        assertEquals(createdFilm.getGenre(), retrievedFilm.getGenre());
+        assertEquals(createdFilm.getMpa(), retrievedFilm.getMpa());
     }
 
     @Test
@@ -128,8 +139,8 @@ class FilmControllerTest {
 
     @Test
     void addLike_ShouldAddLikeToFilm_WhenFilmAndUserExist() {
-        Film film = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>());
-        User user = new User(null, "user@email.com", "userLogin", "userName", LocalDate.of(1990, 1, 1), new HashSet<>());
+        Film film = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>(), Genre.COMEDY, MPA.G);
+        User user = new User(null, "user@email.com", "userLogin", "userName", LocalDate.of(1990, 1, 1), new HashMap<>());
         filmController.createFilm(film);
         userStorage.addUser(user);
         filmController.addLike(1L, 1L);
@@ -140,7 +151,7 @@ class FilmControllerTest {
 
     @Test
     void addLike_ShouldThrowNotFoundException_WhenFilmDoesNotExist() {
-        User user = new User(null, "user@email.com", "userLogin", "userName", LocalDate.of(1990, 1, 1), new HashSet<>());
+        User user = new User(null, "user@email.com", "userLogin", "userName", LocalDate.of(1990, 1, 1), new HashMap<>());
         userStorage.addUser(user);
         NotFoundException ex = assertThrows(NotFoundException.class, () -> filmController.addLike(1L, 1L));
         assertEquals("Фильм с id 1 не найден", ex.getMessage());
@@ -148,7 +159,7 @@ class FilmControllerTest {
 
     @Test
     void addLike_ShouldThrowNotFoundException_WhenUserDoesNotExist() {
-        Film film = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>());
+        Film film = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>(), Genre.COMEDY, MPA.G);
         filmController.createFilm(film);
         NotFoundException ex = assertThrows(NotFoundException.class, () -> filmController.addLike(1L, 1L));
         assertEquals("Пользователь с id 1 не найден", ex.getMessage());
@@ -156,8 +167,8 @@ class FilmControllerTest {
 
     @Test
     void deleteLike_ShouldDeleteLikeFromFilm_WhenLikeExists() {
-        Film film = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>());
-        User user = new User(null, "user@email.com", "userLogin", "userName", LocalDate.of(1990, 1, 1), new HashSet<>());
+        Film film = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>(), Genre.COMEDY, MPA.G);
+        User user = new User(null, "user@email.com", "userLogin", "userName", LocalDate.of(1990, 1, 1), new HashMap<>());
         filmController.createFilm(film);
         userStorage.addUser(user);
         filmController.addLike(1L, 1L);
@@ -169,8 +180,8 @@ class FilmControllerTest {
 
     @Test
     void deleteLike_ShouldThrowNotFoundException_WhenLikeDoesNotExist() {
-        Film film = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>());
-        User user = new User(null, "user@email.com", "userLogin", "userName", LocalDate.of(1990, 1, 1), new HashSet<>());
+        Film film = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>(), Genre.COMEDY, MPA.G);
+        User user = new User(null, "user@email.com", "userLogin", "userName", LocalDate.of(1990, 1, 1), new HashMap<>());
         filmController.createFilm(film);
         userStorage.addUser(user);
         NotFoundException ex = assertThrows(NotFoundException.class, () -> filmController.deleteLike(1L, 1L));
@@ -179,10 +190,10 @@ class FilmControllerTest {
 
     @Test
     void getPopularFilms_ShouldReturnSortedFilms_WhenFilmsHaveLikes() {
-        Film film1 = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>());
-        Film film2 = new Film(null, "Film 2", "Description 2", LocalDate.of(2000, 1, 1), 100, new HashSet<>());
-        User user1 = new User(null, "user1@email.com", "userLogin1", "userName1", LocalDate.of(1990, 1, 1), new HashSet<>());
-        User user2 = new User(null, "user2@email.com", "userLogin2", "userName2", LocalDate.of(1990, 1, 1), new HashSet<>());
+        Film film1 = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>(), Genre.COMEDY, MPA.G);
+        Film film2 = new Film(null, "Film 2", "Description 2", LocalDate.of(2000, 1, 1), 100, new HashSet<>(), Genre.DRAMA, MPA.PG);
+        User user1 = new User(null, "user1@email.com", "userLogin1", "userName1", LocalDate.of(1990, 1, 1), new HashMap<>());
+        User user2 = new User(null, "user2@email.com", "userLogin2", "userName2", LocalDate.of(1990, 1, 1), new HashMap<>());
         filmController.createFilm(film1);
         filmController.createFilm(film2);
         userStorage.addUser(user1);
@@ -199,9 +210,9 @@ class FilmControllerTest {
 
     @Test
     void getPopularFilms_ShouldReturnCorrectAmount_WhenCountIsSpecified() {
-        Film film1 = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>());
-        Film film2 = new Film(null, "Film 2", "Description 2", LocalDate.of(2000, 1, 1), 100, new HashSet<>());
-        Film film3 = new Film(null, "Film 3", "Description 3", LocalDate.of(2000, 1, 1), 100, new HashSet<>());
+        Film film1 = new Film(null, "Film 1", "Description 1", LocalDate.of(2000, 1, 1), 100, new HashSet<>(), Genre.COMEDY, MPA.G);
+        Film film2 = new Film(null, "Film 2", "Description 2", LocalDate.of(2000, 1, 1), 100, new HashSet<>(), Genre.DRAMA, MPA.PG);
+        Film film3 = new Film(null, "Film 3", "Description 3", LocalDate.of(2000, 1, 1), 100, new HashSet<>(), Genre.ACTION, MPA.R);
 
         filmController.createFilm(film1);
         filmController.createFilm(film2);

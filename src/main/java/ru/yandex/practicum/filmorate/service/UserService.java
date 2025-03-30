@@ -3,13 +3,11 @@ package ru.yandex.practicum.filmorate.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
+import ru.yandex.practicum.filmorate.model.FriendshipStatus;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,8 +39,15 @@ public class UserService {
     public void addFriend(long userId, long friendId) {
         User user = checkAndGetUserById(userId);
         User friend = checkAndGetUserById(friendId);
-        user.getFriends().add(friendId);
-        friend.getFriends().add(userId);
+        
+        if (friend.getFriends().containsKey(userId)) {
+            user.getFriends().put(friendId, FriendshipStatus.CONFIRMED);
+            friend.getFriends().put(userId, FriendshipStatus.CONFIRMED);
+        } else {
+            user.getFriends().put(friendId, FriendshipStatus.UNCONFIRMED);
+            friend.getFriends().put(userId, FriendshipStatus.UNCONFIRMED);
+        }
+        
         userStorage.updateUser(user);
         userStorage.updateUser(friend);
     }
@@ -60,8 +65,8 @@ public class UserService {
         User user = checkAndGetUserById(userId);
         User otherUser = checkAndGetUserById(otherUserId);
 
-        Set<Long> userFriends = user.getFriends();
-        Set<Long> otherUserFriends = otherUser.getFriends();
+        Set<Long> userFriends = user.getFriends().keySet();
+        Set<Long> otherUserFriends = otherUser.getFriends().keySet();
 
         Set<Long> commonFriendsIds = new HashSet<>(userFriends);
         commonFriendsIds.retainAll(otherUserFriends);
@@ -73,7 +78,18 @@ public class UserService {
 
     public List<User> getUserFriends(long userId) {
         User user = checkAndGetUserById(userId);
-        return user.getFriends().stream()
+        Set<Long> confirmedFriends = new HashSet<>();
+        
+        for (Map.Entry<Long, FriendshipStatus> entry : user.getFriends().entrySet()) {
+            Long friendId = entry.getKey();
+            User friend = checkAndGetUserById(friendId);
+            
+            if (friend.getFriends().containsKey(userId)) {
+                confirmedFriends.add(friendId);
+            }
+        }
+        
+        return confirmedFriends.stream()
                 .map(this::checkAndGetUserById)
                 .collect(Collectors.toList());
     }

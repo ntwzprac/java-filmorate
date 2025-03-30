@@ -8,8 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
 
 @Data
 @AllArgsConstructor
@@ -17,12 +16,12 @@ import java.util.Set;
 public class User {
     private Long id;
     @NotBlank(message = "Почта не может быть пустой")
-    @Email(message = "Некорректный формат почты")
+    @Email(message = "Некорректный не может быть пустым")
     private String email;
     @NotBlank(message = "Логин не может быть пустым")
     private String login;
     private String name;
-    @PastOrPresent(message = "Дата рождения не может быть в будущем")
+    @PastOrPresent(message = "День рождения не может быть в будущем")
     private LocalDate birthday;
-    private Set<Long> friends = new HashSet<>();
+    private HashMap<Long, FriendshipStatus> friends = new HashMap<>();
 }
