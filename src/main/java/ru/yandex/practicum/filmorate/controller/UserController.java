@@ -1,80 +1,85 @@
 package ru.yandex.practicum.filmorate.controller;
 
-import jakarta.validation.Valid;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exceptions.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
 
+import java.time.LocalDate;
 import java.util.Collection;
 
 @RestController
-@Slf4j
 @RequestMapping("/users")
+@RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
 
-    @Autowired
-    public UserController(UserService userService) {
-        this.userService = userService;
+    @PostMapping
+    public User addUser(@RequestBody @Validated User user) {
+        validateUser(user);
+        return userService.addUser(user);
+    }
+
+    @PutMapping
+    public User updateUser(@RequestBody User user) {
+        validateUser(user);
+        if (user.getId() == null) {
+            throw new ValidationException("ID пользователя не может быть пустым");
+        }
+        return userService.updateUser(user);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteUser(@PathVariable long id) {
+        userService.deleteUser(id);
+    }
+
+    @GetMapping("/{id}")
+    public User getUserById(@PathVariable long id) {
+        return userService.getUserById(id);
     }
 
     @GetMapping
     public Collection<User> getAllUsers() {
-        log.info("Получен список пользователей");
         return userService.getAllUsers();
     }
 
-    @GetMapping("/{id}")
-    public User getUserById(@PathVariable Long id) {
-        log.info("Запрошен пользователь с id: {}", id);
-        return userService.getUserById(id);
-    }
-
-    @PostMapping
-    public User createUser(@Valid @RequestBody User user) {
-        validateAndSetName(user);
-        log.info("Создан пользователь " + user);
-        return userService.createUser(user);
-    }
-
-    @PutMapping
-    public User updateUser(@Valid @RequestBody User user) {
-        validateAndSetName(user);
-        log.info("Обновлен пользователь " + user);
-        return userService.updateUser(user);
-    }
-
     @PutMapping("/{id}/friends/{friendId}")
-    public void addFriend(@PathVariable Long id, @PathVariable Long friendId) {
-        log.info("Пользователь " + id + " добавляет в друзья пользователя " + friendId);
+    public void addFriend(@PathVariable long id, @PathVariable long friendId) {
         userService.addFriend(id, friendId);
     }
 
     @DeleteMapping("/{id}/friends/{friendId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteFriend(@PathVariable Long id, @PathVariable Long friendId) {
-        log.info("Пользователь " + id + " удаляет из друзей пользователя " + friendId);
+    public void removeFriend(@PathVariable long id, @PathVariable long friendId) {
         userService.removeFriend(id, friendId);
     }
 
     @GetMapping("/{id}/friends")
-    public Collection<User> getFriends(@PathVariable Long id) {
-        log.info("Запрошен список друзей пользователя " + id);
-        return userService.getUserFriends(id);
+    public Collection<User> getFriends(@PathVariable long id) {
+        return userService.getFriends(id);
     }
 
     @GetMapping("/{id}/friends/common/{otherId}")
-    public Collection<User> getCommonFriends(@PathVariable Long id, @PathVariable Long otherId) {
-        log.info("Запрошен список общих друзей пользователя " + id + " и " + otherId);
+    public Collection<User> getCommonFriends(@PathVariable long id, @PathVariable long otherId) {
         return userService.getCommonFriends(id, otherId);
     }
 
-    private void validateAndSetName(User user) {
-        if (user.getName() == null || user.getName().isEmpty()) {
-            user.setName(user.getLogin());
+    private void validateUser(User user) {
+        if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
+            throw new ValidationException("Электронная почта не может быть пустой и должна содержать символ @");
+        }
+        if (user.getLogin() == null || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
+            throw new ValidationException("Логин не может быть пустым и содержать пробелы");
+        }
+        if (user.getBirthday() == null) {
+            throw new ValidationException("Дата рождения не может быть пустой");
+        }
+        if (user.getBirthday().isAfter(LocalDate.now())) {
+            throw new ValidationException("Дата рождения не может быть в будущем");
         }
     }
 }

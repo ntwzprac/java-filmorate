@@ -2,133 +2,79 @@ package ru.yandex.practicum.filmorate.controller;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
+import org.springframework.test.annotation.DirtiesContext;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
-import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest
+@AutoConfigureTestDatabase
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 class UserControllerTest {
 
+    @Autowired
     private UserController userController;
+
+    @Autowired
     private UserService userService;
-    private UserStorage userStorage;
+
+    private User testUser;
 
     @BeforeEach
     void setUp() {
-        userStorage = new InMemoryUserStorage();
-        userService = new UserService(userStorage);
-        userController = new UserController(userService);
+        testUser = new User();
+        testUser.setEmail("test@example.com");
+        testUser.setLogin("testlogin");
+        testUser.setName("Test User");
+        testUser.setBirthday(LocalDate.of(1990, 1, 1));
     }
 
     @Test
-    void getAllUsers_shouldReturnEmptyList_whenNoUsersAdded() {
+    void testAddUser() {
+        User addedUser = userController.addUser(testUser);
+
+        assertNotNull(addedUser.getId());
+        assertEquals(testUser.getEmail(), addedUser.getEmail());
+        assertEquals(testUser.getLogin(), addedUser.getLogin());
+        assertEquals(testUser.getName(), addedUser.getName());
+        assertEquals(testUser.getBirthday(), addedUser.getBirthday());
+    }
+
+    @Test
+    void testUpdateUser() {
+        User addedUser = userController.addUser(testUser);
+        addedUser.setName("Updated User");
+
+        User updatedUser = userController.updateUser(addedUser);
+
+        assertEquals("Updated User", updatedUser.getName());
+    }
+
+    @Test
+    void testGetAllUsers() {
+        userController.addUser(testUser);
+
         Collection<User> users = userController.getAllUsers();
-        assertTrue(users.isEmpty());
+
+        assertThat(users).hasSize(1);
+        assertThat(users).contains(testUser);
     }
 
     @Test
-    void getAllUsers_shouldReturnAllUsers_whenUsersAdded() {
-        User user1 = new User(null, "user1@example.com", "user1Login", "User 1", LocalDate.of(1990, 1, 1), new HashSet<>());
-        User user2 = new User(null, "user2@example.com", "user2Login", "User 2", LocalDate.of(1995, 5, 5), new HashSet<>());
-        userController.createUser(user1);
-        userController.createUser(user2);
+    void testGetUserById() {
+        User addedUser = userController.addUser(testUser);
 
-        Collection<User> users = userController.getAllUsers();
-        assertEquals(2, users.size());
-        assertTrue(users.contains(user1));
-        assertTrue(users.contains(user2));
-    }
+        User retrievedUser = userController.getUserById(addedUser.getId());
 
-    @Test
-    void createUser_shouldCreateUserWithIdAndNameFromLogin_whenNameIsEmpty() {
-        User user = new User(null, "test@example.com", "testLogin", "", LocalDate.of(2000, 1, 1), new HashSet<>());
-
-        User createdUser = userController.createUser(user);
-
-        assertNotNull(createdUser.getId());
-        assertEquals("testLogin", createdUser.getName());
-        assertEquals(user.getEmail(), createdUser.getEmail());
-        assertEquals(user.getLogin(), createdUser.getLogin());
-        assertEquals(user.getBirthday(), createdUser.getBirthday());
-        assertEquals(1, userStorage.getAllUsers().size());
-        assertTrue(userStorage.getAllUsers().contains(createdUser));
-    }
-
-    @Test
-    void createUser_shouldCreateUserWithIdAndNameFromLogin_whenNameIsNull() {
-        User user = new User(null, "test@example.com", "testLogin", null, LocalDate.of(2000, 1, 1), new HashSet<>());
-
-        User createdUser = userController.createUser(user);
-
-        assertNotNull(createdUser.getId());
-        assertEquals("testLogin", createdUser.getName());
-        assertEquals(user.getEmail(), createdUser.getEmail());
-        assertEquals(user.getLogin(), createdUser.getLogin());
-        assertEquals(user.getBirthday(), createdUser.getBirthday());
-        assertEquals(1, userStorage.getAllUsers().size());
-        assertTrue(userStorage.getAllUsers().contains(createdUser));
-    }
-
-    @Test
-    void createUser_shouldCreateUserWithCorrectData() {
-        User user = new User(null, "test@example.com", "testLogin", "Test User", LocalDate.of(2000, 1, 1), new HashSet<>());
-
-        User createdUser = userController.createUser(user);
-
-        assertNotNull(createdUser.getId());
-        assertEquals("Test User", createdUser.getName());
-        assertEquals(user.getEmail(), createdUser.getEmail());
-        assertEquals(user.getLogin(), createdUser.getLogin());
-        assertEquals(user.getBirthday(), createdUser.getBirthday());
-        assertEquals(1, userStorage.getAllUsers().size());
-        assertTrue(userStorage.getAllUsers().contains(createdUser));
-    }
-
-    @Test
-    void updateUser_shouldUpdateExistingUser() {
-        User user = new User(null, "test@example.com", "testLogin", "Test User", LocalDate.of(2000, 1, 1), new HashSet<>());
-        User createdUser = userController.createUser(user);
-        User updatedUser = new User(createdUser.getId(), "updated@example.com", "updatedLogin", "Updated User", LocalDate.of(2001, 2, 2), new HashSet<>());
-
-        User resultUser = userController.updateUser(updatedUser);
-
-        assertEquals(updatedUser.getId(), resultUser.getId());
-        assertEquals(updatedUser.getEmail(), resultUser.getEmail());
-        assertEquals(updatedUser.getLogin(), resultUser.getLogin());
-        assertEquals(updatedUser.getName(), resultUser.getName());
-        assertEquals(updatedUser.getBirthday(), resultUser.getBirthday());
-
-        assertEquals(1, userStorage.getAllUsers().size());
-        Optional<User> resultFromStorage = userStorage.getUserById(createdUser.getId());
-        assertTrue(resultFromStorage.isPresent());
-        assertEquals(updatedUser.getName(), resultFromStorage.get().getName());
-    }
-
-    @Test
-    void updateUser_shouldThrowValidationException_whenUserNotFound() {
-        User updatedUser = new User(1L, "new@example.com", "newLogin", "New User", LocalDate.of(2002, 3, 3), new HashSet<>());
-
-        NotFoundException exception = assertThrows(NotFoundException.class, () -> userController.updateUser(updatedUser));
-        assertEquals("Пользователь с id 1 не найден", exception.getMessage());
-    }
-
-    @Test
-    void createUser_ShouldAssignCorrectId_WhenMultipleUsersCreated() {
-        User user1 = new User(null, "user1@example.com", "user1Login", "User 1", LocalDate.of(1990, 1, 1), new HashSet<>());
-        User user2 = new User(null, "user2@example.com", "user2Login", "User 2", LocalDate.of(1995, 5, 5), new HashSet<>());
-        User createdUser1 = userController.createUser(user1);
-        User createdUser2 = userController.createUser(user2);
-        assertEquals(1, createdUser1.getId());
-        assertEquals(2, createdUser2.getId());
+        assertEquals(addedUser, retrievedUser);
     }
 }

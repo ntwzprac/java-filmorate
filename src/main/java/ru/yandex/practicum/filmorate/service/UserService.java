@@ -1,84 +1,86 @@
 package ru.yandex.practicum.filmorate.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
+import ru.yandex.practicum.filmorate.model.FriendshipStatus;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
+import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
     private final UserStorage userStorage;
 
-    @Autowired
-    public UserService(UserStorage userStorage) {
-        this.userStorage = userStorage;
+    public User addUser(User user) {
+        if (user.getName() == null || user.getName().isBlank()) {
+            user.setName(user.getLogin());
+        }
+
+        return userStorage.addUser(user);
+    }
+
+    public User updateUser(User user) {
+        getUserById(user.getId());
+        return userStorage.updateUser(user);
+    }
+
+    public void deleteUser(long userId) {
+        getUserById(userId);
+        userStorage.deleteUser(userId);
+    }
+
+    public User getUserById(long userId) {
+        return userStorage.getUserById(userId)
+                .orElseThrow(() -> new NotFoundException("Пользователь с id " + userId + " не найден"));
     }
 
     public Collection<User> getAllUsers() {
         return userStorage.getAllUsers();
     }
 
-    public User getUserById(long userId) {
-        return checkAndGetUserById(userId);
-    }
-
-    public User createUser(User user) {
-        return userStorage.addUser(user);
-    }
-
-    public User updateUser(User user) {
-        return userStorage.updateUser(user);
-    }
-
     public void addFriend(long userId, long friendId) {
-        User user = checkAndGetUserById(userId);
-        User friend = checkAndGetUserById(friendId);
-        user.getFriends().add(friendId);
-        friend.getFriends().add(userId);
-        userStorage.updateUser(user);
-        userStorage.updateUser(friend);
+        getUserById(userId);
+        getUserById(friendId);
+        userStorage.addFriend(userId, friendId);
     }
 
     public void removeFriend(long userId, long friendId) {
-        User user = checkAndGetUserById(userId);
-        User friend = checkAndGetUserById(friendId);
-        user.getFriends().remove(friendId);
-        friend.getFriends().remove(userId);
-        userStorage.updateUser(user);
-        userStorage.updateUser(friend);
+        getUserById(userId);
+        getUserById(friendId);
+        userStorage.removeFriend(userId, friendId);
+    }
+
+    public Collection<User> getFriends(long userId) {
+        getUserById(userId);
+        return userStorage.getFriends(userId);
     }
 
     public List<User> getCommonFriends(long userId, long otherUserId) {
-        User user = checkAndGetUserById(userId);
-        User otherUser = checkAndGetUserById(otherUserId);
-
-        Set<Long> userFriends = user.getFriends();
-        Set<Long> otherUserFriends = otherUser.getFriends();
-
-        Set<Long> commonFriendsIds = new HashSet<>(userFriends);
-        commonFriendsIds.retainAll(otherUserFriends);
-
-        return commonFriendsIds.stream()
-                .map(this::checkAndGetUserById)
-                .collect(Collectors.toList());
+        getUserById(userId);
+        getUserById(otherUserId);
+        return userStorage.getCommonFriends(userId, otherUserId);
     }
 
     public List<User> getUserFriends(long userId) {
-        User user = checkAndGetUserById(userId);
-        return user.getFriends().stream()
-                .map(this::checkAndGetUserById)
-                .collect(Collectors.toList());
-    }
+        User user = getUserById(userId);
+        Set<Long> confirmedFriends = new HashSet<>();
 
-    private User checkAndGetUserById(long id) {
-        return userStorage.getUserById(id).orElseThrow(() -> new NotFoundException("Пользователь с id " + id + " не найден"));
+        for (Map.Entry<Long, FriendshipStatus> entry : user.getFriends().entrySet()) {
+            Long friendId = entry.getKey();
+            User friend = getUserById(friendId);
+
+            if (friend.getFriends().containsKey(userId)) {
+                confirmedFriends.add(friendId);
+            }
+        }
+
+        return confirmedFriends.stream()
+                .map(this::getUserById)
+                .collect(Collectors.toList());
     }
 }
