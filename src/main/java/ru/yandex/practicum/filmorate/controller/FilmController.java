@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
+import ru.yandex.practicum.filmorate.exceptions.ValidationException;
 
 import java.util.Collection;
 
@@ -15,11 +16,16 @@ public class FilmController {
 
     @PostMapping
     public Film addFilm(@RequestBody Film film) {
+        validateFilm(film);
         return filmService.addFilm(film);
     }
 
     @PutMapping
     public Film updateFilm(@RequestBody Film film) {
+        validateFilm(film);
+        if (film.getId() == null) {
+            throw new ValidationException("ID фильма не может быть пустым");
+        }
         return filmService.updateFilm(film);
     }
 
@@ -51,5 +57,23 @@ public class FilmController {
     @GetMapping("/popular")
     public Collection<Film> getPopularFilms(@RequestParam(defaultValue = "10") int count) {
         return filmService.getPopularFilms(count);
+    }
+
+    private void validateFilm(Film film) {
+        if (film.getName() == null || film.getName().isBlank()) {
+            throw new ValidationException("Название фильма не может быть пустым");
+        }
+        if (film.getDescription() != null && film.getDescription().length() > 200) {
+            throw new ValidationException("Описание фильма не может быть длиннее 200 символов");
+        }
+        if (film.getReleaseDate() == null) {
+            throw new ValidationException("Дата релиза не может быть пустой");
+        }
+        if (film.getDuration() <= 0) {
+            throw new ValidationException("Продолжительность фильма должна быть положительной");
+        }
+        if (film.getMpa() == null) {
+            throw new ValidationException("MPA рейтинг не может быть пустым");
+        }
     }
 }

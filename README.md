@@ -5,10 +5,10 @@
 
 ## Топ N наиболее популярных фильмов
 ```sql
-SELECT Films.id, Films.name, COUNT(Likes.user_id) AS likes_count
-FROM Films
-LEFT JOIN Likes ON Films.id = Likes.film_id
-GROUP BY Films.id
+SELECT f.id, f.name, COUNT(l.like_id) AS likes_count
+FROM Films f
+LEFT JOIN Likes l ON f.id = l.film_id
+GROUP BY f.id
 ORDER BY likes_count DESC
 LIMIT N;
 ```
@@ -17,17 +17,20 @@ LIMIT N;
 ## Список общих друзей с другим пользователем:
 ```sql
 SELECT u2.id, u2.name
-FROM Friends AS f1
-JOIN Friends AS f2 ON f1.friend_id = f2.friend_id
-JOIN Users AS u2 ON f2.friend_id = u2.id
-WHERE f1.user_id = user1_id AND f2.user_id = user2_id;
+FROM Friends f1
+JOIN Friends f2 ON f1.friend_id = f2.friend_id
+JOIN Users u2 ON f2.friend_id = u2.id
+WHERE f1.user_id = user1_id 
+  AND f2.user_id = user2_id
+  AND f1.status = 'CONFIRMED'
+  AND f2.status = 'CONFIRMED';
 ```
 
 ## Получение рейтинга фильма:
 ```sql
-SELECT Films.id, Films.name, MPA.name AS mpa_rating
-FROM Films
-JOIN MPA ON Films.mpa_id = MPA.id;
+SELECT f.id, f.name, m.name AS mpa_rating
+FROM Films f
+JOIN MPA m ON f.mpa_id = m.id;
 ```
 
 # Небольшое пояснение
