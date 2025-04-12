@@ -13,9 +13,6 @@ import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
 import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,12 +37,8 @@ public class FilmService {
         filmStorage.removeLike(filmId, userId);
     }
 
-    public List<Film> getPopularFilms(int count) {
-        Collection<Film> allFilms = filmStorage.getAllFilms();
-        return allFilms.stream()
-                .sorted(Comparator.comparingInt((Film film) -> film.getLikes().size()).reversed())
-                .limit(count)
-                .collect(Collectors.toList());
+    public Collection<Film> getPopularFilms(int count) {
+        return filmStorage.getPopularFilms(count);
     }
 
     public Collection<Film> getAllFilms() {

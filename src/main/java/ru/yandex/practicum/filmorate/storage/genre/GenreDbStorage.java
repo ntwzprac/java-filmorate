@@ -4,9 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.mappers.GenreMapper;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Optional;
 
@@ -14,25 +13,19 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class GenreDbStorage implements GenreStorage {
     private final JdbcTemplate jdbcTemplate;
+    private final GenreMapper genreMapper;
 
     @Override
     public Collection<Genre> getAllGenres() {
         String sql = "SELECT * FROM genres ORDER BY id";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> makeGenre(rs));
+        return jdbcTemplate.query(sql, genreMapper);
     }
 
     @Override
     public Optional<Genre> getGenreById(long id) {
         String sql = "SELECT * FROM genres WHERE id = ?";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> makeGenre(rs), id)
+        return jdbcTemplate.query(sql, genreMapper, id)
                 .stream()
                 .findFirst();
-    }
-
-    private Genre makeGenre(ResultSet rs) throws SQLException {
-        Genre genre = new Genre();
-        genre.setId(rs.getLong("id"));
-        genre.setName(rs.getString("name"));
-        return genre;
     }
 }

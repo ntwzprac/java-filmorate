@@ -4,9 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.model.Mpa;
+import ru.yandex.practicum.filmorate.model.mappers.MpaMapper;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Optional;
 
@@ -14,25 +13,19 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class MpaDbStorage implements MpaStorage {
     private final JdbcTemplate jdbcTemplate;
+    private final MpaMapper mpaMapper;
 
     @Override
     public Collection<Mpa> getAllMpa() {
         String sql = "SELECT * FROM mpa ORDER BY id";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> makeMpa(rs));
+        return jdbcTemplate.query(sql, mpaMapper);
     }
 
     @Override
     public Optional<Mpa> getMpaById(long id) {
         String sql = "SELECT * FROM mpa WHERE id = ?";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> makeMpa(rs), id)
+        return jdbcTemplate.query(sql, mpaMapper, id)
                 .stream()
                 .findFirst();
-    }
-
-    private Mpa makeMpa(ResultSet rs) throws SQLException {
-        Mpa mpa = new Mpa();
-        mpa.setId(rs.getLong("id"));
-        mpa.setName(rs.getString("name"));
-        return mpa;
     }
 }

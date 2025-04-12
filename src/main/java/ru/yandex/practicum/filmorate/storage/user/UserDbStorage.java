@@ -5,15 +5,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
-import ru.yandex.practicum.filmorate.model.FriendshipStatus;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.model.mappers.UserMapper;
 
 import java.sql.Date;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +18,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UserDbStorage implements UserStorage {
     private final JdbcTemplate jdbcTemplate;
+    private final UserMapper userMapper;
 
     @Override
     public User addUser(User user) {
@@ -61,7 +59,7 @@ public class UserDbStorage implements UserStorage {
     @Override
     public Optional<User> getUserById(long userId) {
         String sql = "SELECT * FROM users WHERE id = ?";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> makeUser(rs), userId)
+        return jdbcTemplate.query(sql, userMapper, userId)
                 .stream()
                 .findFirst();
     }
@@ -69,27 +67,7 @@ public class UserDbStorage implements UserStorage {
     @Override
     public Collection<User> getAllUsers() {
         String sql = "SELECT * FROM users";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> makeUser(rs));
-    }
-
-    private User makeUser(ResultSet rs) throws SQLException {
-        User user = new User();
-        user.setId(rs.getLong("id"));
-        user.setEmail(rs.getString("email"));
-        user.setLogin(rs.getString("login"));
-        user.setName(rs.getString("name"));
-        user.setBirthday(rs.getDate("birthday").toLocalDate());
-
-        String friendsSql = "SELECT friend_id, status FROM friends WHERE user_id = ?";
-        HashMap<Long, FriendshipStatus> friends = new HashMap<>();
-        jdbcTemplate.query(friendsSql, (rs2, rowNum) -> {
-            friends.put(rs2.getLong("friend_id"),
-                    rs2.getString("status").equals("CONFIRMED") ? FriendshipStatus.CONFIRMED : FriendshipStatus.UNCONFIRMED);
-            return null;
-        }, user.getId());
-        user.setFriends(friends);
-
-        return user;
+        return jdbcTemplate.query(sql, userMapper);
     }
 
     public void addFriend(long userId, long friendId) {
@@ -120,7 +98,7 @@ public class UserDbStorage implements UserStorage {
         String sql = "SELECT u.* FROM users u " +
                 "JOIN friends f ON u.id = f.friend_id " +
                 "WHERE f.user_id = ?";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> makeUser(rs), userId);
+        return jdbcTemplate.query(sql, userMapper, userId);
     }
 
     public List<User> getCommonFriends(long userId, long otherUserId) {
@@ -128,6 +106,6 @@ public class UserDbStorage implements UserStorage {
                 "JOIN friends f1 ON u.id = f1.friend_id " +
                 "JOIN friends f2 ON u.id = f2.friend_id " +
                 "WHERE f1.user_id = ? AND f2.user_id = ?";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> makeUser(rs), userId, otherUserId);
+        return jdbcTemplate.query(sql, userMapper, userId, otherUserId);
     }
 }
