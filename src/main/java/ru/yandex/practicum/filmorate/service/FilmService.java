@@ -1,13 +1,15 @@
 package ru.yandex.practicum.filmorate.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.exceptions.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.FilmStorage;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
+import ru.yandex.practicum.filmorate.storage.mpa.MpaStorage;
+import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.genre.GenreStorage;
+import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -16,17 +18,16 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+;
+
 @Service
+@RequiredArgsConstructor
 public class FilmService {
 
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
-
-    @Autowired
-    public FilmService(FilmStorage filmStorage, UserStorage userStorage) {
-        this.filmStorage = filmStorage;
-        this.userStorage = userStorage;
-    }
+    private final GenreStorage genreStorage;
+    private final MpaStorage mpaStorage;
 
     public void addLike(long filmId, long userId) {
         Film film = getFilmAndUser(filmId, userId);
@@ -73,23 +74,31 @@ public class FilmService {
         return filmStorage.getFilmById(id).orElseThrow(() -> new NotFoundException("Фильм с id " + id + " не найден"));
     }
 
-    public Film createFilm(Film film) {
+    public Film addFilm(Film film) {
         validateFilm(film);
         return filmStorage.addFilm(film);
     }
 
     public Film updateFilm(Film film) {
         validateFilm(film);
-        try {
-            return filmStorage.updateFilm(film);
-        } catch (RuntimeException e) {
-            throw new NotFoundException(e.getMessage());
-        }
+        return filmStorage.updateFilm(film);
+    }
+
+    public void deleteFilm(long filmId) {
+        filmStorage.deleteFilm(filmId);
     }
 
     private void validateFilm(Film film) {
         if (film.getReleaseDate().isBefore(LocalDate.of(1895, 12, 28))) {
             throw new ValidationException("Дата релиза фильма не может быть раньше 28 декабря 1895 года");
+        }
+        if (film.getMpa() != null) {
+            mpaStorage.getMpaById(film.getMpa().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Рейтинг с id " + film.getMpa().getId() + " не найден"));
+        }
+        if (film.getGenre() != null) {
+            genreStorage.getGenreById(film.getGenre().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Жанр с id " + film.getGenre().getId() + " не найден"));
         }
     }
 }
